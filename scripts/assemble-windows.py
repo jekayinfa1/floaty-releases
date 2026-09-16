@@ -11,6 +11,8 @@ import time
 REPO = 'jekayinfa1/floaty-releases'
 assert os.environ['GITHUB_REPOSITORY'] == REPO
 source, target = os.environ['SOURCE_TAG'], os.environ['TARGET_TAG']
+manifest_sha256 = os.environ['MANIFEST_SHA256']
+assert re.fullmatch(r'[a-f0-9]{64}', manifest_sha256)
 assert re.fullmatch(r'upload-windows-\d+\.\d+\.\d+-[0-9]+', source)
 assert re.fullmatch(r'v\d+\.\d+\.\d+', target)
 version = target[1:]
@@ -39,6 +41,7 @@ with tempfile.TemporaryDirectory(prefix='floaty-installer-') as directory:
     published = json.loads(gh('api', f'repos/{REPO}/releases/tags/{target}'))
     assert not published['draft'], 'Target must already be public'
     gh('release', 'download', source, '--repo', REPO, '--dir', str(root))
+    assert digest(root / 'manifest.json') == manifest_sha256, 'Manifest differs from reviewed bytes'
     manifest = json.loads((root / 'manifest.json').read_text())
     assert manifest['version'] == version
     assert {f['name'] for f in manifest['files']} == allowed

@@ -13,6 +13,9 @@ on:
         description: Existing public release to receive Windows assets
         type: string
         default: v3.0.84
+      manifest_sha256:
+        description: Independently verified SHA-256 of manifest.json
+        type: string
 permissions:
   contents: write
 concurrency:
@@ -33,4 +36,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_TAG: ${{ inputs.source_tag }}
           TARGET_TAG: ${{ inputs.target_tag }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
         run: python3 scripts/assemble-windows.py
