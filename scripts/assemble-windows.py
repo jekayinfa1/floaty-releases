@@ -34,8 +34,8 @@ def check(file, item):
 
 with tempfile.TemporaryDirectory(prefix='floaty-installer-') as directory:
     root = Path(directory)
-    info = json.loads(gh('api', f'repos/{REPO}/releases/tags/{source}'))
-    assert info['draft'], 'Chunk source must be a draft release'
+    info = json.loads(gh('release', 'view', source, '--repo', REPO, '--json', 'isDraft'))
+    assert info['isDraft'], 'Chunk source must be a draft release'
     published = json.loads(gh('api', f'repos/{REPO}/releases/tags/{target}'))
     assert not published['draft'], 'Target must already be public'
     gh('release', 'download', source, '--repo', REPO, '--dir', str(root))
@@ -70,7 +70,7 @@ with tempfile.TemporaryDirectory(prefix='floaty-installer-') as directory:
         check(filename, item)
         print('Verified reconstructed ' + item['name'], flush=True)
     for item in manifest['files']:
-        for attempt in range(4):
+        for attempt in range(5):
             release = json.loads(gh('api', f'repos/{REPO}/releases/tags/{target}'))
             existing = next((a for a in release['assets'] if a['name'] == item['name']), None)
             if existing:
@@ -78,7 +78,9 @@ with tempfile.TemporaryDirectory(prefix='floaty-installer-') as directory:
                 assert existing['size'] == item['size']
                 assert existing['digest'] == 'sha256:' + item['sha256']
                 break
-            result = subprocess.run(['gh', 'release', 'upload', target, str(output / item['name']), '--repo', REPO])
+            if attempt == 4:
+                raise RuntimeError('Upload did not verify: ' + item['name'])
+            subprocess.run(['gh', 'release', 'upload', target, str(output / item['name']), '--repo', REPO])
             time.sleep(2)
         else:
             raise RuntimeError('Upload did not verify: ' + item['name'])
