@@ -1,0 +1,36 @@
+name: Assemble verified Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      runner_only:
+        description: Confirm public runner availability without publishing
+        type: boolean
+        default: true
+      source_tag:
+        description: Draft release containing manifest.json and verified chunks
+        type: string
+      target_tag:
+        description: Existing public release to receive Windows assets
+        type: string
+        default: v3.0.84
+permissions:
+  contents: write
+concurrency:
+  group: assemble-windows-release
+  cancel-in-progress: false
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Confirm runner availability
+        run: echo "Public standard runner available; this job assembles verified installer bytes."
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        if: ${{ !inputs.runner_only }}
+      - name: Assemble and publish verified assets
+        if: ${{ !inputs.runner_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_TAG: ${{ inputs.source_tag }}
+          TARGET_TAG: ${{ inputs.target_tag }}
+        run: python3 scripts/assemble-windows.py
